@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dhikr Counter</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e6efec;--card:#fff;--ink:#10302c;--mute:#566e6a;--line:#cfdcd8;--acc:#1d7a6b;--gold:#a8791f;--track:#cfdcd8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1d1b;--card:#132a27;--ink:#e6f2ef;--mute:#8fa8a3;--line:#24433f;--acc:#4fc2ae;--gold:#e0b659;--track:#24433f}}
+:root[data-theme="dark"]{--bg:#0c1d1b;--card:#132a27;--ink:#e6f2ef;--mute:#8fa8a3;--line:#24433f;--acc:#4fc2ae;--gold:#e0b659;--track:#24433f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;line-height:1.4}
+main{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+.hero{padding:12px 4px 20px;text-align:center}
+.ar{font-family:Amiri,'Traditional Arabic',serif;font-size:34px;color:var(--gold);line-height:1.5;min-height:1em}
+.lbl{color:var(--mute);font-size:14px}
+.big{font-size:clamp(48px,16vw,72px);font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:2px 0 14px}
+.bar{height:10px;background:var(--track);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--acc);border-radius:99px;transition:width .4s}
+.meta{display:flex;justify-content:space-between;color:var(--mute);font-size:13px;margin-top:8px}
+.done{display:none;margin-top:12px;font-weight:600;color:var(--gold)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:8px;margin-top:8px}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%;min-width:0}
+input:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 16px;background:var(--acc);color:#fff;cursor:pointer;white-space:nowrap}
+:root[data-theme="dark"] button,:root:not([data-theme="light"]) button{color:#06201c}
+button.chip{background:transparent;color:var(--ink);border:1px solid var(--line);padding:8px 12px;font-weight:400}
+button.ghost{background:transparent;color:var(--mute);padding:6px 8px;font-weight:400;border:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+h2{font-size:16px;margin:0 0 4px}
+.day{display:flex;justify-content:space-between;color:var(--mute);font-size:13px;margin:16px 0 4px}
+.item{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.item span{flex:1}
+.item b{font-weight:600}
+.empty{color:var(--mute);font-size:14px;padding:8px 0}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+  <section id="setup" class="card hide">
+    <h2>Set your goal</h2>
+    <div class="lbl">Choose a dhikr and a total count. Each entry will be subtracted from it.</div>
+    <div class="row"><input id="user" type="text" maxlength="30" placeholder="Your name"></div>
+    <div class="chips" id="presets"></div>
+    <div class="row"><input id="name" type="text" placeholder="Dhikr name" value="Istighfar"></div>
+    <div class="row">
+      <input id="target" type="number" inputmode="numeric" min="1" placeholder="Total count, e.g. 50000" value="50000">
+      <button id="startBtn">Start</button>
+    </div>
+  </section>
+
+  <div id="app" class="hide">
+    <section class="hero">
+      <div class="lbl" id="hello"></div>
+      <div class="ar" id="ar"></div>
+      <div class="lbl" id="title">Remaining</div>
+      <div class="big" id="left">0</div>
+      <div class="bar"><i id="fill"></i></div>
+      <div class="meta"><span id="doneTxt">Done 0</span><span id="total">of 0</span></div>
+      <div class="done" id="doneMsg">Goal complete. Alhamdulillah!</div>
+    </section>
+
+    <section class="card">
+      <h2>Log today's count</h2>
+      <div class="row">
+        <input id="amt" type="number" inputmode="numeric" min="1" placeholder="How many?">
+        <button id="addBtn">Subtract</button>
+      </div>
+      <div class="chips">
+        <button class="chip" data-q="100">+100</button>
+        <button class="chip" data-q="500">+500</button>
+        <button class="chip" data-q="1000">+1,000</button>
+        <button class="chip" data-q="5000">+5,000</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>History</h2>
+      <div id="list"></div>
+    </section>
+
+    <div style="text-align:center">
+      <button class="ghost" id="nameBtn">Change name</button>
+      <button class="ghost" id="editBtn">Change goal</button>
+      <button class="ghost" id="resetBtn">Start over</button>
+    </div>
+  </div>
+</main>
+<script>
+const KEY='dhikr-v1';
+const PRESETS={'Istighfar':'أَسْتَغْفِرُ اللّٰهَ','SubhanAllah':'سُبْحَانَ اللّٰهِ','Alhamdulillah':'الْحَمْدُ لِلّٰهِ','Allahu Akbar':'اللّٰهُ أَكْبَرُ','La ilaha illallah':'لَا إِلٰهَ إِلَّا اللّٰهُ','Salawat':'اللّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّد'};
+let S={name:null,target:0,items:[]};
+try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&Array.isArray(p.items))S=p}}catch(e){}
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString('en-US');
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const dayKey=t=>new Date(t).toDateString();
+const dayName=t=>{const d=new Date(t),n=new Date(),y=new Date();y.setDate(n.getDate()-1);
+ if(d.toDateString()===n.toDateString())return 'Today';
+ if(d.toDateString()===y.toDateString())return 'Yesterday';
+ return d.toLocaleDateString('en-US',{month:'long',day:'numeric'})};
+const arabicFor=n=>{const k=Object.keys(PRESETS).find(p=>p.toLowerCase()===(n||'').trim().toLowerCase());return k?PRESETS[k]:''};
+
+$('presets').innerHTML=Object.keys(PRESETS).map(p=>`<button class="chip" data-p="${p}">${p}</button>`).join('');
+$('presets').onclick=e=>{if(e.target.dataset.p)$('name').value=e.target.dataset.p};
+
+function render(){
+  const has=S.name!==null;
+  $('setup').classList.toggle('hide',has);
+  $('app').classList.toggle('hide',!has);
+  if(!has){if(S.user&&!$('user').value)$('user').value=S.user;return}
+  $('hello').textContent=S.user?'Assalamu alaikum, '+S.user:'';
+  const done=S.items.reduce((a,i)=>a+i.n,0),left=Math.max(0,S.target-done);
+  $('ar').textContent=arabicFor(S.name);
+  $('title').textContent=S.name+' remaining';
+  $('left').textContent=fmt(left);
+  $('fill').style.width=Math.min(100,done/S.target*100)+'%';
+  $('doneTxt').textContent='Done '+fmt(done);
+  $('total').textContent='of '+fmt(S.target);
+  $('doneMsg').style.display=left===0?'block':'none';
+  const L=$('list');
+  if(!S.items.length){L.innerHTML='<div class="empty">Nothing logged yet. Add your first count above.</div>';return}
+  const groups={};
+  [...S.items].sort((a,b)=>b.t-a.t).forEach(i=>{(groups[dayKey(i.t)]=groups[dayKey(i.t)]||[]).push(i)});
+  L.innerHTML=Object.values(groups).map(g=>{
+    const sum=g.reduce((a,i)=>a+i.n,0);
+    return `<div class="day"><span>${dayName(g[0].t)}</span><span>${fmt(sum)} total</span></div>`+
+    g.map(i=>`<div class="item"><span>−${fmt(i.n)}</span><button class="ghost" data-id="${i.t}" aria-label="Delete entry">✕</button></div>`).join('')
+  }).join('');
+}
+
+function start(){
+  const t=parseInt($('target').value,10),n=$('name').value.trim()||'Dhikr';
+  if(!(t>0))return $('target').focus();
+  S={user:$('user').value.trim(),name:n,target:t,items:[]};save();render();
+}
+$('nameBtn').onclick=()=>{const v=prompt('Your name',S.user||'');if(v===null)return;S.user=v.trim();save();render()};
+function add(q){
+  const v=q||parseInt($('amt').value,10);
+  if(!(v>0))return $('amt').focus();
+  S.items.push({t:Date.now(),n:v});
+  $('amt').value='';save();render();
+}
+$('startBtn').onclick=start;
+$('target').onkeydown=e=>{if(e.key==='Enter')start()};
+$('addBtn').onclick=()=>add();
+$('amt').onkeydown=e=>{if(e.key==='Enter')add()};
+document.querySelector('.chips button[data-q]').parentNode.onclick=e=>{if(e.target.dataset.q)add(parseInt(e.target.dataset.q,10))};
+$('list').onclick=e=>{const id=e.target.dataset&&e.target.dataset.id;if(id){S.items=S.items.filter(i=>String(i.t)!==id);save();render()}};
+$('editBtn').onclick=()=>{const v=prompt('New total count',S.target);if(v===null)return;const n=parseInt(v,10);if(n>0){S.target=n;save();render()}};
+$('resetBtn').onclick=()=>{if(confirm('Delete all entries and the goal?')){S={user:S.user,name:null,target:0,items:[]};save();render()}};
+render();
+</script>
+</body>
+</html>
